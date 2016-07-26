@@ -9,11 +9,11 @@
 function Const() {};
 Const.DEBUG_ALL = false;
 
-Const.MAX_HARVESTERS     = 5;
-Const.MAX_UPGRADERS      = 2;
+Const.MAX_HARVESTERS     = 4;
+Const.MAX_UPGRADERS      = 1;
 Const.MAX_BUILDERS       = 0;
 Const.MAX_REPAIRERS      = 1;
-Const.MAX_WALLREPAIRERS  = 1;
+Const.MAX_WALLREPAIRERS  = 2;
 Const.MAX_SOLDATS        = 0;
 Const.MAX_HEALERS        = 0;
 Const.MAX_REMOTES        = 0;

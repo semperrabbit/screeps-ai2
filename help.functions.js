@@ -26,57 +26,61 @@ Utils.initRoomsInMemory = function() {
         Memory.rooms = {};
     }
     for(let room in Game.rooms) {
-        Memory.rooms[room] = {};
-        Memory.rooms[room]['harvester']    = {
+        if(Memory.rooms[room] === undefined) {
+            console.log('Memory.rooms[ ' + room + '] doesnt exist')
+            Memory.rooms[room] = {};
+        }
+        Memory.rooms[room].types = {};
+        Memory.rooms[room].types['harvester']    = {
 			total: 0,
 			goalPercentage: Const.PERCENT_HARVESTERS,
 			currentPercentage: 0,
 			max: Const.MAX_HARVESTERS,
 			minExtensions: 0
 		}
-        Memory.rooms[room]['upgrader']     = {
+        Memory.rooms[room].types['upgrader']     = {
 			total: 0,
 			goalPercentage: Const.PERCENT_UPGRADERS,
 			currentPercentage: 0,
 			max: Const.MAX_UPGRADERS,
 			minExtensions: 0,
 		}
-        Memory.rooms[room]['builder']      = {
+        Memory.rooms[room].types['builder']      = {
 			total: 0,
 			goalPercentage: Const.PERCENT_BUILDERS,
 			currentPercentage: 0,
 			max: Const.MAX_BUILDERS,
 			minExtensions: 0
 		}
-        Memory.rooms[room]['repairer']     = {
+        Memory.rooms[room].types['repairer']     = {
 			total: 0,
 			goalPercentage: Const.PERCENT_REPAIRERS,
 			currentPercentage: 0,
 			max: Const.MAX_REPAIRERS,
 			minExtensions: 0
 		}
-        Memory.rooms[room]['wallRepairer'] = {
+        Memory.rooms[room].types['wallRepairer'] = {
 			total: 0,
 			goalPercentage: Const.PERCENT_WALLREPAIRERS,
 			currentPercentage: 0,
 			max: Const.MAX_WALLREPAIRERS,
 			minExtensions: 0
 		}
-        Memory.rooms[room]['soldat']       = {
+        Memory.rooms[room].types['soldat']       = {
 			total: 0,
 			goalPercentage: Const.PERCENT_SOLDATS,
 			currentPercentage: 0,
 			max: Const.MAX_SOLDATS,
 			minExtensions: 0
 		}
-        Memory.rooms[room]['healer']       = {
+        Memory.rooms[room].types['healer']       = {
 			total: 0,
 			goalPercentage: Const.PERCENT_HEALERS,
 			currentPercentage: 0,
 			max: Const.MAX_HEALERS,
 			minExtensions: 0
 		}
-        Memory.rooms[room]['scout']        = {
+        Memory.rooms[room].types['scout']        = {
 			total: 0,
 			goalPercentage: Const.PERCENT_SCOUTS,
 			currentPercentage: 0,
@@ -84,7 +88,7 @@ Utils.initRoomsInMemory = function() {
 			minExtensions: 0
 		
         }
-        Memory.rooms[room]['remote']      = {
+        Memory.rooms[room].types['remote']      = {
 			total: 0,
 			goalPercentage: Const.PERCENT_REMOTESS,
 			currentPercentage: 0,
@@ -92,14 +96,14 @@ Utils.initRoomsInMemory = function() {
 			minExtensions: 0
 		
         }
-        Memory.rooms[room]['ambassador']   = {
+        Memory.rooms[room].types['ambassador']   = {
 			total: 0,
 			goalPercentage: Const.PERCENT_AMBASSADORS,
 			currentPercentage: 0,
 			max: Const.MAX_AMBASSADORS,
 			minExtensions: 0
 		}
-        Memory.rooms[room]['deconstructor']   = {
+        Memory.rooms[room].types['deconstructor']   = {
 			total: 0,
 			goalPercentage: Const.PERCENT_AMBASSADORS,
 			currentPercentage: 0,
@@ -112,7 +116,7 @@ Utils.initRoomsInMemory = function() {
             var currRole = Memory.creeps[creep].role;
 //            console.log(creep +'\t'+currRole);
             if(creep != 0 || currRole != unknown){
-                Memory.rooms[currRoom][currRole].total++;
+                Memory.rooms[currRoom].types[currRole].total++;
                 Memory.rooms[currRoom].creepsInRoom.push(creep);
             }
         }

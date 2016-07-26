@@ -95,7 +95,7 @@ Utils.initRoomsInMemory();
         var energy = roomObject.energyCapacityAvailable;
         var name = 0;
 //        console.log(Game.rooms[room])
-        var typeDistribution = Memory.rooms[room];
+        var typeDistribution = Memory.rooms[room].types;
         var currTotal = 0;
         var total = 0;
         

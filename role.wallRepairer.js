@@ -17,14 +17,15 @@ module.exports = {
         // if creep is supposed to repair something
         if (creep.memory.working == true) {
             // find all walls in the room
-//            var walls = creep.room.find(FIND_STRUCTURES, {
-//                filter: (s) => s.structureType == STRUCTURE_RAMPART || s.structureType == STRUCTURE_WALL
-//            });
+            var walls = creep.room.find(FIND_STRUCTURES, {
+                filter: (s) => s.structureType == STRUCTURE_RAMPART || s.structureType == STRUCTURE_WALL
+            });
 
             var target = undefined;
+            var targetPerc = 1.0;
 
             // loop with increasing percentages
-            for (let percentage = 0.0001; percentage <= 1; percentage = percentage + 0.0001){
+            /*for (let percentage = 0.0001; percentage <= 1; percentage = percentage + 0.0001){
                 // find a wall with less than percentage hits
 
                 // for some reason this doesn't work
@@ -42,6 +43,13 @@ module.exports = {
                 if (target != undefined) {
                     // break the loop
                     break;
+                }
+            }*/
+
+            for(targets in walls) {
+                if((targets.hits/targets.hitsMax) < targetPerc) {
+                    target = targets;
+                    targetPerc = targets.hits/targets.hitsMax;
                 }
             }
 
