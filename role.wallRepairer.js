@@ -1,8 +1,9 @@
 var roleBuilder = require('role.builder');
+var Utils = require('help.functions');
 
 module.exports = {
     // a function to run the logic for this role
-    run: function(creep) {
+    run: function(creep, cache) {
         // if creep is trying to repair something but has no energy left
         if (creep.memory.working == true && creep.carry.energy == 0) {
             // switch state
@@ -17,42 +18,33 @@ module.exports = {
         // if creep is supposed to repair something
         if (creep.memory.working == true) {
             // find all walls in the room
-            var walls = creep.room.find(FIND_STRUCTURES, {
-                filter: (s) => s.structureType == STRUCTURE_RAMPART || s.structureType == STRUCTURE_WALL
-            });
-
+            var targets = cache.get(creep.pos.roomName+'_walls');
             var target = undefined;
-            var targetPerc = 1.0;
 
-            // loop with increasing percentages
-            /*for (let percentage = 0.0001; percentage <= 1; percentage = percentage + 0.0001){
-                // find a wall with less than percentage hits
+            var wallTarget = undefined;
+            var wallTargetPerc = 1.0;
 
-                // for some reason this doesn't work
-                // target = creep.pos.findClosestByPath(walls, {
-                //     filter: (s) => s.hits / s.hitsMax < percentage
-                // });
+            var rampartTarget = undefined;
+            var rampartTargetPerc = 1.0;
 
-                // so we have to use this
-                target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (s) => (s.structureType == STRUCTURE_RAMPART || s.structureType == STRUCTURE_WALL) &&
-                                   (s.hits / s.hitsMax < percentage)
-                });
-
-                // if there is one
-                if (target != undefined) {
-                    // break the loop
-                    break;
+            for(let i in targets) {
+                if(((targets[i].hits/targets[i].hitsMax) < wallTargetPerc) && targets[i].structureType == STRUCTURE_WALL) {
+                    wallTarget     = targets[i];
+                    wallTargetPerc = targets[i].hits/targets[i].hitsMax;
                 }
-            }*/
-
-            for(targets in walls) {
-                if((targets.hits/targets.hitsMax) < targetPerc) {
-                    target = targets;
-                    targetPerc = targets.hits/targets.hitsMax;
+                if(((targets[i].hits/targets[i].hitsMax) < rampartTargetPerc) && targets[i].structureType == STRUCTURE_RAMPART) {
+                    rampartTarget     = targets[i];
+                    rampartTargetPerc = targets[i].hits/targets[i].hitsMax;
                 }
             }
 
+            if(rampartTarget.hits != rampartTarget.hitsMax && rampartTarget.hits < wallTarget.hits) {
+                target = rampartTarget;
+            } else {
+                target = wallTarget;
+            }
+
+            //console.log(creep.name + '\tTarget pos: ' + target.pos);
             // if we find a wall that has to be repaired
             if (target != undefined) {
                 // try to repair it, if not in range

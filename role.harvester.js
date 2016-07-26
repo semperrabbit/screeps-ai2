@@ -43,7 +43,7 @@ module.exports = {
                     // so we have to use this
                     target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                         filter: (s) => ((s.structureType == STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] / s.storeCapacity < percentage) ||
-                                        (s.structureType == STRUCTURE_STORAGE   && s.store[RESOURCE_ENERGY] / s.storeCapacity < (percentage * 500)))
+                                        (s.structureType == STRUCTURE_STORAGE   && s.store[RESOURCE_ENERGY] / s.storeCapacity < percentage))
                     });
     
                     // if there is one
@@ -54,7 +54,7 @@ module.exports = {
                 }
     
                 // if we find a wall that has to be repaired
-                if (target != undefined) {
+                if(target != undefined) {
                     // try to deposit to it, if not in range
                     if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                         // move towards it

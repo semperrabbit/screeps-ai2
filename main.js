@@ -4,6 +4,7 @@ require('prototype.soldatspawn')();
 require('prototype.medicspawn')();
 require('prototype.remotespawn')();
 var Const = require('help.constants');
+var Cache = require('help.cache');
 var Utils = require('help.functions');
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
@@ -19,33 +20,23 @@ var structureTower = require('structure.tower');
 
 module.exports.loop = function () {
     var output = '';
-Utils.initRoomsInMemory();
-    if (Memory.ticks === undefined) Memory.ticks = 0; Memory.ticks++;
-//    console.log('Ticks: '+Memory.ticks);
+    var cache = new Cache();
 
     Utils.garbageCollect();
-    Utils.initGlobalCache();
-//    Memory.walls = Utils.findStructuresByType([STRUCTURE_WALL, STRUCTURE_RAMPART]);
 
-
+    Utils.initRoomsInMemory();
+    Utils.loadWallsInCache(cache);
 
     for(let room in Game.rooms) {
-        var towers = Game.rooms[room].find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_TOWER }
-        });
-        for(tower in towers) {
-            if(tower.my)
-                structureTower.run(tower);
-        }
 
+        //Run for each tower in my room, run the structure.tower module
+        var towers = Game.rooms[room].find(FIND_MY_STRUCTURES,{filter: { structureType: STRUCTURE_TOWER}});
+        for(let i in towers) {if(towers[i].my)structureTower.run(towers[i]);}
 
         var creeps = Memory.rooms[room].creepsInRoom;
-//        console.log(creeps);
         for (let i in creeps) {
             creep = Game.creeps[creeps[i]];
-//            console.log(creeps[i])
             var roleName = creep.memory.role;
-//            console.log(roleName);
             switch(roleName) {
                 case 'harvester':
                     roleHarvester.run(creep);
@@ -60,7 +51,7 @@ Utils.initRoomsInMemory();
                     roleRepairer.run(creep);
                     break;
                 case 'wallRepairer':
-                    roleWallRepairer.run(creep);
+                    roleWallRepairer.run(creep, cache);
                     break;
                 case 'soldat':
                     roleHarvester.run(creep);
@@ -78,14 +69,13 @@ Utils.initRoomsInMemory();
                     roleRemote.run(creep);
                     break;
                 default:
-//                    console.log('Unkown creep type: ' + roleName)
             }
         }
     }    
 
 	
 	if(!(Game.time % 8)) {
-	       console.log('Room\tHarves\tUpgrad\tBuilde\tRepair\tWallRe\tSoldat\tHealer\tRemote\tScouts\tAmbass\tGoal %');
+	       console.log('Room\tHarves\tUpgrad\tBuilde\tRepair\tWallRe\tSoldat\tHealer\tRemote\tScouts\tAmbass\tGoal %\tDeathIn');
 	}
     for(let room in Game.rooms) {
         if(Game.rooms.length > 1) {
@@ -94,7 +84,6 @@ Utils.initRoomsInMemory();
         var roomObject = Game.rooms[room];
         var energy = roomObject.energyCapacityAvailable;
         var name = 0;
-//        console.log(Game.rooms[room])
         var typeDistribution = Memory.rooms[room].types;
         var currTotal = 0;
         var total = 0;
@@ -118,8 +107,7 @@ Utils.initRoomsInMemory();
             typeDistribution['remote'].total       + '/' + Const.MAX_REMOTES        + '\t' +
             typeDistribution['scout'].total        + '/' + Const.MAX_SCOUTS         + '\t' +
             typeDistribution['ambassador'].total   + '/' + Const.MAX_AMBASSADORS    + '\t' +
-            parseInt(currTotal/total*1000)/10.0 + '%' +
-        '\t';
+            parseInt(currTotal/total*1000)/10.0 + '%' + '\t' + Utils.getNextExpectedDeathInRoom(room) + '\t';
     
         // if not enough harvesters
        for(let type in typeDistribution){

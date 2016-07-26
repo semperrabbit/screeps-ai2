@@ -11,12 +11,22 @@ var Cache = require('help.cache');
 
 function Utils() {};
 
-Utils.cache = undefined;
-Utils.initGlobalCache = function(){
-    if(Memory.globalCacheTick === undefined ||
-       Memory.globalCacheTick != Game.tick) {
-        Memory.globalCacheTick = Game.tick;
-        Utils.cache = new Cache();
+Utils.loadWallsInCache = function(cache) {
+    var walls = [];
+    var wallList = [];
+    for(let room in Game.rooms) {
+        if(Memory.rooms[room].isMine == true) {
+            wallList = Game.rooms[room].find(FIND_STRUCTURES, {filter: {structureType: STRUCTURE_WALL   }});
+            for(let i in wallList){walls.push(wallList[i]);}
+            wallList = Game.rooms[room].find(FIND_MY_STRUCTURES, {filter: {structureType: STRUCTURE_RAMPART}});
+            for(let i in wallList){walls.push(wallList[i]);}
+        }
+        if(Memory.globalCacheTick == Game.tick) {
+        	if(!cache.get(room+'_walls')) {
+        		cache.set(room+'_walls', walls);
+        	}
+        }
+        walls = [];
     }
 }
 
@@ -110,11 +120,16 @@ Utils.initRoomsInMemory = function() {
 			max: Const.MAX_AMBASSADORS,
 			minExtensions: 0
 		}
+        Memory.rooms[room].isMine     = false;
+        if(Game.rooms[room].find(FIND_MY_STRUCTURES)) {Memory.rooms[room].isMine = true;}
+
+        Memory.rooms[room].hasThreats = false;
+        if(Game.rooms[room].find(FIND_HOSTILE_STRUCTURES) || Game.rooms[room].find(FIND_HOSTILE_CREEPS)) {Memory.rooms[room].isMine = true;}
+
         Memory.rooms[room].creepsInRoom = [];
         for(var creep in Game.creeps) {
             var currRoom = Game.creeps[creep].pos.roomName;
             var currRole = Memory.creeps[creep].role;
-//            console.log(creep +'\t'+currRole);
             if(creep != 0 || currRole != unknown){
                 Memory.rooms[currRoom].types[currRole].total++;
                 Memory.rooms[currRoom].creepsInRoom.push(creep);
@@ -124,14 +139,12 @@ Utils.initRoomsInMemory = function() {
         Memory.rooms[room].energyDeposits = [];
         var energyDeposits = Game.rooms[room].find(FIND_SOURCES);
         for(let i in energyDeposits) {
-            //console.log(energyDeposits[i].pos)
             Memory.rooms[room].energyDeposits.push(energyDeposits[i].pos);
         }
 
         Memory.rooms[room].mineralDeposits = [];
         var mineralDeposits = Game.rooms[room].find(FIND_MINERALS);
         for(let i in mineralDeposits) {
-//            console.log(i);
             Memory.rooms[room].mineralDeposits.push(mineralDeposits[i].pos);
             Memory.rooms[room].mineralDeposits[i].type = mineralDeposits[i].mineralType;
         }
@@ -187,7 +200,6 @@ Utils.routeCreep = function(creep,dest) {
             if(typeof Memory.routeCache[stepStr]['dests'][''+dest.id] === "undefined"){
                Memory.routeCache[stepStr]['dests'][''+dest.id] = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0};
             }
-            //console.log(path[i+1].direction);
             Memory.routeCache[stepStr]['dests'][''+dest.id][path[i+1].direction]+=1;
 
         }
@@ -292,5 +304,230 @@ Utils.goalsMet = function() {
 // +'  '+ 
 	return true;
 };
+
+Utils.getMaxPopulation = function() {
+	var population = 0;
+	var oneRoom = false;
+	for(let room in Game.rooms) {
+		var typeDistribution = Memory.rooms[room].types;
+		if(oneRoom){return population}
+		oneRoom = true;
+		for(var n in typeDistribution) {
+			population += typeDistribution[n].max;
+		}
+	}
+	return population;
+};
+Utils.getNextExpectedDeathInRoom = function(room) {
+	var ttl = 100000;
+	var creeps = Memory.rooms[room].creepsInRoom;
+	for(var i = 0; i < creeps.length; i++) {
+		var creep = Game.creeps[creeps[i]];
+
+		if(creep.ticksToLive < ttl) {
+			ttl = creep.ticksToLive;
+		}
+	}
+	return ttl;	
+};
+Utils.createTypeDistribution = function(room, type) {
+	Memory.rooms[room].types[type] = {
+		total: 0,
+		goalPercentage: 0.1,
+		currentPercentage: 0,
+		max: 5,
+		minExtensions: 2
+	};
+};
+
+//Only harvester configured correctly
+Utils.getCreepAbilities = function(creepType, energy) {
+    var abilities = [];
+	switch(creepType) {
+    	case 'harvester':
+    		if       (energy >= 1000) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else if(energy >= 900) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+//    		} else if(energy >= 900) {
+//    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else if(energy >= 800) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else if(energy >= 750) {
+       			abilities = [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else if(energy >= 700) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else if(energy >= 600) {
+    			abilities = [WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else if(energy >= 500) {
+    			abilities = [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else if(energy >= 400) {
+    			abilities = [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else if(energy >= 350) {
+    			abilities = [WORK, WORK, CARRY, MOVE, MOVE];
+    		} else if(energy >= 300) {
+    			abilities = [WORK, WORK, CARRY, MOVE];
+    		} else if(energy >= 200) {
+    			abilities = [WORK, CARRY, MOVE];
+    		}
+    	break;
+    	case 'CreepBuilder':
+    		if(energy <= 1) {
+    			abilities = [WORK, CARRY, MOVE];
+    		} else
+    		if(energy <= 2) {
+    			abilities = [WORK, CARRY, CARRY, MOVE];
+    		} else
+    		if(energy <= 3) {
+    			abilities = [WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 4) {
+    			abilities = [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 5) {
+    			abilities = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy <= 6) {
+    			abilities = [WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 7) {
+    			abilities = [WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 8) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 9) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy >= 10) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		}
+    	break;
+    	case 'CreepUpgrader':
+    		if(energy <= 1) {
+    			abilities = [WORK, CARRY, MOVE];
+    		} else
+    		if(energy <= 2) {
+    			abilities = [WORK, CARRY, CARRY, MOVE];
+    		} else
+    		if(energy <= 3) {
+    			abilities = [WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 4) {
+    			abilities = [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 5) {
+    			abilities = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy <= 6) {
+    			abilities = [WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 7) {
+    			abilities = [WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 8) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 9) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy >= 10) {
+    			abilities = [WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+    		}
+    	break;
+    	case 'CreepCarrier':
+    		if(energy <= 1) {
+    			abilities = [CARRY, MOVE];
+    		} else
+    		if(energy <= 2) {
+    			abilities = [CARRY, CARRY, MOVE];
+    		} else
+    		if(energy <= 3) {
+    			abilities = [CARRY, CARRY, MOVE, MOVE];
+    		} else
+    		if(energy <= 4) {
+    			abilities = [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy <= 5) {
+    			abilities = [CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy <= 6) {
+    			abilities = [CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy <= 7) {
+    			abilities = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy <= 8) {
+    			abilities = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy <= 9) {
+    			abilities = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE];
+    		} else
+    		if(energy >= 10) {
+    			abilities = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,  CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE];
+    		}
+    	break;
+    	case 'CreepSoldier':
+    		if(energy <= 1) {
+    			abilities = [TOUGH, ATTACK, MOVE];
+    		} else
+    		if(energy <= 2) {
+    			abilities = [TOUGH, MOVE, ATTACK, MOVE];
+    		} else
+    		if(energy <= 3) {
+    			abilities = [TOUGH, MOVE, ATTACK, ATTACK, ATTACK, MOVE];
+    		} else
+    		if(energy <= 4) {
+    			abilities = [TOUGH, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, MOVE];
+    		} else
+    		if(energy <= 5) {
+    			abilities = [TOUGH, TOUGH, TOUGH, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE];
+    		} else
+    		if(energy <= 6) {
+    			abilities = [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE];
+    		} else
+    		if(energy <= 7) {
+    			abilities = [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE];
+    		} else
+    		if(energy <= 8) {
+    			abilities = [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE];
+    		} else
+    		if(energy <= 9) {
+    			abilities = [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE];
+    		} else
+    		if(energy >= 10) {
+    			abilities = [TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE];
+    		}
+    	break;
+    	case 'CreepShooter':
+    		if(energy <= 5) {
+    			abilities = [TOUGH, TOUGH, TOUGH, MOVE, RANGED_ATTACK, RANGED_ATTACK, MOVE];
+    		} else
+    		if(energy <= 6) {
+    			abilities = [TOUGH, TOUGH, TOUGH, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, MOVE];
+    		} else
+    		if(energy <= 7) {
+    			abilities = [TOUGH, TOUGH, TOUGH, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, MOVE];
+    		} else
+    		if(energy <= 8) {
+    			abilities = [TOUGH, TOUGH, TOUGH, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, MOVE];
+    		} else
+    		if(energy <= 9) {
+    			abilities = [TOUGH, TOUGH, TOUGH, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, MOVE];
+    		} else
+    		if(energy >= 10) {
+    			abilities = [TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, MOVE];
+    		}
+    	break;
+    	case 'CreepScout':
+    		abilities = [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE];
+    	break;
+    	case 'CreepHealer':
+    		abilities = [MOVE, MOVE, MOVE, HEAL, MOVE];
+    	break;
+    }
+    return abilities;
+};
+
 
 module.exports = Utils;
