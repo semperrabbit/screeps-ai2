@@ -17,9 +17,9 @@ module.exports = {
         // if creep is supposed to repair something
         if (creep.memory.working == true) {
             // find all walls in the room
-            var walls = creep.room.find(FIND_STRUCTURES, {
-                filter: (s) => s.structureType == STRUCTURE_WALL
-            });
+//            var walls = creep.room.find(FIND_STRUCTURES, {
+//                filter: (s) => s.structureType == STRUCTURE_RAMPART || s.structureType == STRUCTURE_WALL
+//            });
 
             var target = undefined;
 
@@ -33,9 +33,9 @@ module.exports = {
                 // });
 
                 // so we have to use this
-                target = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-                    filter: (s) => s.structureType == STRUCTURE_WALL &&
-                                   s.hits / s.hitsMax < percentage
+                target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (s) => (s.structureType == STRUCTURE_RAMPART || s.structureType == STRUCTURE_WALL) &&
+                                   (s.hits / s.hitsMax < percentage)
                 });
 
                 // if there is one
@@ -62,7 +62,7 @@ module.exports = {
         // if creep is supposed to harvest energy from source
         else {
             // find closest source
-            var source = creep.pos.findClosestByPath(FIND_SOURCES, {
+            var source = creep.pos.findClosestByRange(FIND_SOURCES, {
                 filter: (s) => s.energy > 0
             });
             // try to harvest energy, if the source is not in range

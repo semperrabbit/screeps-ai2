@@ -5,10 +5,10 @@ module.exports = function() {
             // create a balanced body as big as possible with the given energy
             var numberOfParts = Math.floor(energy / 300);
             var body = [];
-            for (let i = 0; i < numberOfParts; i++) {
+            for (let i = 0; i < numberOfParts-1; i++) {
                 body.push(WORK);
             }
-            for (let i = 0; i < numberOfParts; i++) {
+            for (let i = 0; i < numberOfParts+1; i++) {
                 body.push(CARRY);
             }
             for (let i = 0; i < numberOfParts; i++) {
@@ -19,3 +19,4 @@ module.exports = function() {
             return this.createCreep(body, undefined, { role: roleName, working: false });
         };
 };
+
