@@ -21,6 +21,43 @@ Utils.loadWallsInCache = function(cache) {
             wallList = Game.rooms[room].find(FIND_MY_STRUCTURES, {filter: {structureType: STRUCTURE_RAMPART}});
             for(let i in wallList){walls.push(wallList[i]);}
         }
+        walls.sort(function(a,b){
+                if(a.structureType == b.structureType){ return a.hits-b.hits;}
+                if(a.structureType == STRUCTURE_RAMPART && b.structureType == STRUCTURE_WALL){
+                    if(a.hits != a.hitsMax && a.hits < b.hits) {
+                        return -1;
+                    } else {
+                        return 1;
+                    }
+                }
+                if(a.structureType == STRUCTURE_WALL && b.structureType == STRUCTURE_RAMPART){
+                    if(b.hits != b.hitsMax && a.hits > b.hits) {
+                        return 1;
+                    } else {
+                        return -1;
+                    }
+                }
+                return 0;
+            }
+        );
+
+/*            for(let i in targets) {
+                if(((targets[i].hits/targets[i].hitsMax) < wallTargetPerc) && targets[i].structureType == STRUCTURE_WALL) {
+                    wallTarget     = targets[i];
+                    wallTargetPerc = targets[i].hits/targets[i].hitsMax;
+                }
+                if(((targets[i].hits/targets[i].hitsMax) < rampartTargetPerc) && targets[i].structureType == STRUCTURE_RAMPART) {
+                    rampartTarget     = targets[i];
+                    rampartTargetPerc = targets[i].hits/targets[i].hitsMax;
+                }
+            }
+
+            if(rampartTarget.hits != rampartTarget.hitsMax && rampartTarget.hits < wallTarget.hits) {
+                target = rampartTarget;
+            } else {
+                target = wallTarget;
+            }
+*/
         if(Memory.globalCacheTick == Game.tick) {
         	if(!cache.get(room+'_walls')) {
         		cache.set(room+'_walls', walls);
@@ -273,9 +310,9 @@ Utils.findStructuresByType = function(types) {
 //    Game.structures
     for(let struc in Game.structures) {
         for (let type in types) {
-//            if(Game.structures[struc] typeof type) {
+            if(Game.structures[struc].structureType == type) {
                 ret.push(struc);
-//            }
+            }
         }
     }
     
@@ -293,9 +330,11 @@ Utils.garbageCollect = function() {
     }
     
 }
-Utils.goalsMet = function() {
-	for(var n in Const.typeDistribution) {
-		var type = Const.typeDistribution[n];
+
+Utils.goalsMet = function(room) {
+	var typeDistribution = Memory.rooms[room].types;
+	for(var n in typeDistribution) {
+		var type = typeDistribution[n];
 //		Const.debug('population', 'goal for type ' + n +' == ' + type.currentPercentage +' < '+(type.goalPercentage - type.goalPercentage/4) +' && '+type.total < type.max) || type.total == 0  || type.total < type.max*0.75);
 		if((type.currentPercentage < (type.goalPercentage - type.goalPercentage/4) && type.total < type.max) || type.total == 0  || type.total < type.max*0.75) {
 			return false;
@@ -320,15 +359,19 @@ Utils.getMaxPopulation = function() {
 };
 Utils.getNextExpectedDeathInRoom = function(room) {
 	var ttl = 100000;
+	var roleName = '';
+	var name = '';
 	var creeps = Memory.rooms[room].creepsInRoom;
 	for(var i = 0; i < creeps.length; i++) {
 		var creep = Game.creeps[creeps[i]];
 
 		if(creep.ticksToLive < ttl) {
-			ttl = creep.ticksToLive;
+		    roleName = creep.memory.role;
+			ttl      = creep.ticksToLive;
+			name     = creep.name;
 		}
 	}
-	return ttl;	
+	return {name: name, ttl: ttl, role: roleName};	
 };
 Utils.createTypeDistribution = function(room, type) {
 	Memory.rooms[room].types[type] = {

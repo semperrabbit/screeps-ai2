@@ -75,7 +75,7 @@ module.exports.loop = function () {
 
 	
 	if(!(Game.time % 8)) {
-	       console.log('Room\tHarves\tUpgrad\tBuilde\tRepair\tWallRe\tSoldat\tHealer\tRemote\tScouts\tAmbass\tGoal %\tDeathIn');
+	       console.log('Room\tHarves\tUpgrad\tBuilde\tRepair\tWallRe\tSoldat\tHealer\tRemote\tScouts\tAmbass\tGoal %\tNext Death ttl/name/type\t');
 	}
     for(let room in Game.rooms) {
         if(Game.rooms.length > 1) {
@@ -87,14 +87,13 @@ module.exports.loop = function () {
         var typeDistribution = Memory.rooms[room].types;
         var currTotal = 0;
         var total = 0;
-        
+        var nextDeath = Utils.getNextExpectedDeathInRoom(room);
+
         for(let types in typeDistribution) {
-            if(types != 'creepsInRoom' && types!='energyDeposits' && types!='mineralDeposits') {
-                currTotal += typeDistribution[types].total;
-                total     += typeDistribution[types].max;
-            }
+            currTotal += typeDistribution[types].total;
+            total     += typeDistribution[types].max;
         }
-        
+
         output += 
             room + '\t' +
             typeDistribution['harvester'].total    + '/' + Const.MAX_HARVESTERS     + '\t' +
@@ -107,14 +106,14 @@ module.exports.loop = function () {
             typeDistribution['remote'].total       + '/' + Const.MAX_REMOTES        + '\t' +
             typeDistribution['scout'].total        + '/' + Const.MAX_SCOUTS         + '\t' +
             typeDistribution['ambassador'].total   + '/' + Const.MAX_AMBASSADORS    + '\t' +
-            parseInt(currTotal/total*1000)/10.0 + '%' + '\t' + Utils.getNextExpectedDeathInRoom(room) + '\t';
+            parseInt(currTotal/total*10000)/100.0 + '%' + '\t' + nextDeath.ttl      + '/' +
     
         // if not enough harvesters
        for(let type in typeDistribution){
            
        }
         if (typeDistribution['harvester'].total < typeDistribution['harvester'].max) {
-            output += 'Trying to build Harvester';
+            output += 'Trying to build Harvester with ' + energy + ' energy';
             // try to spawn one
             name = Game.spawns.Spawn1.createCustomCreep(energy, 'harvester');
     

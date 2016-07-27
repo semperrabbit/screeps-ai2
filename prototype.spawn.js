@@ -5,9 +5,9 @@ module.exports = function() {
         function(energy, roleName) {
             // create a balanced body as big as possible with the given energy
             var body = [];
-            if(roleName == 'harvester') {
-                body = Utils.getCreepAbilities(roleName, energy);
-            } else {
+//            if(roleName == 'harvester') {
+//                body = Utils.getCreepAbilities(roleName, energy);
+//            } else {
 /*
                 var numberOfMoveAndCarryParts = Math.floor(energy * 0.25); // MOR
                 var numberOfWorkParts         = Math.floor(energy * 0.5);
@@ -21,20 +21,21 @@ module.exports = function() {
                     body.push(MOVE);
                 }
 */
+//                body.push(WORK); body.push(WORK); 
                 var numberOfParts = Math.floor(energy / 300);
-                for (let i = 0; i < numberOfParts-1; i++) {
+                for (let i = 0; i < numberOfParts; i++) {
                     body.push(WORK);
                 }
-                for (let i = 0; i < numberOfParts+1; i++) {
+                for (let i = 0; i < numberOfParts; i++) {
                     body.push(CARRY);
                 }
                 for (let i = 0; i < numberOfParts; i++) {
                     body.push(MOVE);
                 }
-            } 
+//            } 
 
             // create creep with the created body and the given role
-            console.log('Creating a ' + roleName + ' spawn with ' + energy + ' energy.')
+//            console.log('Creating a ' + roleName + ' spawn with ' + energy + ' energy.')
             return this.createCreep(body, undefined, { role: roleName, working: false });
         };
 }

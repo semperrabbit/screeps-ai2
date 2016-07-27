@@ -14,6 +14,7 @@ module.exports = {
 
         // if creep is supposed to transfer energy to the spawn or an extension
         if (creep.memory.working == true) {
+//            console.log('Depositing')
             // find closest spawn or extension which is not full
             var structure = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
                 // the second argument for findClosestByPath is an object which takes
@@ -31,28 +32,12 @@ module.exports = {
                 }
             }else {
 
-                // loop with increasing percentages
-                for (let percentage = 0.0001; percentage <= 1; percentage = percentage + 0.0001){
-                    // find a wall with less than percentage hits
-    
-                    // for some reason this doesn't work
-                    // target = creep.pos.findClosestByPath(walls, {
-                    //     filter: (s) => s.hits / s.hitsMax < percentage
-                    // });
-    
-                    // so we have to use this
-                    target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                        filter: (s) => ((s.structureType == STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] / s.storeCapacity < percentage) ||
-                                        (s.structureType == STRUCTURE_STORAGE   && s.store[RESOURCE_ENERGY] / s.storeCapacity < percentage))
-                    });
-    
-                    // if there is one
-                    if (target != undefined) {
-                        // break the loop
-                        break;
-                    }
-                }
-    
+                // so we have to use this
+                target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (s) => ((s.structureType == STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] < s.storeCapacity) ||
+                                    (s.structureType == STRUCTURE_STORAGE   && s.store[RESOURCE_ENERGY] < s.storeCapacity))
+                });
+
                 // if we find a wall that has to be repaired
                 if(target != undefined) {
                     // try to deposit to it, if not in range
@@ -61,14 +46,14 @@ module.exports = {
                         creep.moveTo(target);
                     }
                 }
-
             }
         }
         // if creep is supposed to harvest energy from source
         else {
             // find closest source
+//            console.log('Harvesting');
             var target = undefined;
-            var source = creep.pos.findClosestByPath(FIND_SOURCES, function(s){s.energy > 0});
+            var source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);//, function(s){s.energy > 0});
             // try to harvest energy, if the source is not in range
             if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
                 // move towards the source
