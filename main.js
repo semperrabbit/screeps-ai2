@@ -107,6 +107,7 @@ module.exports.loop = function () {
             typeDistribution['scout'].total        + '/' + Const.MAX_SCOUTS         + '\t' +
             typeDistribution['ambassador'].total   + '/' + Const.MAX_AMBASSADORS    + '\t' +
             parseInt(currTotal/total*10000)/100.0 + '%' + '\t' + nextDeath.ttl      + '/' +
+            nextDeath.name + '/' + nextDeath.role + '\t';
     
         // if not enough harvesters
        for(let type in typeDistribution){
