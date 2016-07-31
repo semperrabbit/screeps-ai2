@@ -1,8 +1,13 @@
 var roleUpgrader = require('role.upgrader');
+var Utils = require('help.functions');
+require('prototype.Creep')();
 
 module.exports = {
     // a function to run the logic for this role
     run: function(creep) {
+        if(creep.spawning){ return;}
+
+        Utils.pickupNearbyEnergy(creep);
         // if creep is trying to complete a constructionSite but has no energy left
         if (creep.memory.working == true && creep.carry.energy == 0) {
             // switch state

@@ -1,59 +1,67 @@
+require('prototype.Creep')();
+
+var Utils = require('help.functions');
+var roleHarvester = require('role.harvester');
+
 module.exports = {
     // a function to run the logic for this role
-    run: function(creep) {
-        if(!creep.memory.source) {
-            creep.memory.source = {};
-            console.log('Creating source memory')
-        }
+    run: function(creep){
+        if(creep.spawning){ return;}
 
-        // if creep is bringing energy to the spawn or an extension but has no energy left
-        if (creep.memory.working == true && creep.carry.energy == 0) {
-            // switch state
-            creep.memory.working = false;
+
+        Utils.pickupNearbyEnergy(creep);
+        if(!creep.memory.source){
+            console.log('no source in memory')
+            return -1;
+        }
+        var source    = Game.getObjectById(creep.memory.source);
+        var sourcePos = Utils.getObjectPosById(creep.memory.source);
+//console.log(creep.name + ': Source pos:'+sourcePos);
+
+        // if creep is supposed to transfer energy to the spawn or an extension
+//                role working homeRoom source roomTransition rtIndex dir
+        if (creep.memory.working) {
+            if(creep.pos.roomName == creep.memory.homeRoom) {
+                roleHarvester.run(creep);
+            } else { 
+                var roomEnd = undefined;
+                var rmTrans = creep.memory.roomTransition[creep.memory.rtIndex];
+                if(creep.pos.x == rmTrans.src.x && creep.pos.y == rmTrans.src.y && 
+                        creep.pos.roomName == rmTrans.src.roomName) {
+                // if at the end of the room, move to the next room
+                    creep.moveTo(new RoomPosition(rmTrans.dst.x, rmTrans.dst.y, rmTrans.dst.roomName));
+//                    creep.memory.rtIndex--;
+                } else { //if not at end of room,
+                    creep.moveTo(new RoomPosition(rmTrans.src.x, rmTrans.src.y, rmTrans.src.roomName));
+                }
+            
+            }
+        }else {
+        // if creep is supposed to harvest energy from source
+        // role working homeRoom source roomTransition rtIndex dir
+            if(sourcePos.roomName == creep.pos.roomName) {
+            // if in the same room as the source
+                if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, {reusePath: 10});
+                }
+            } else { // not in the same room
+                var roomEnd = undefined;
+                var rmTrans = creep.memory.roomTransition[creep.memory.rtIndex];
+                if(creep.pos.x == rmTrans.dst.x && creep.pos.y == rmTrans.dst.y && 
+                        creep.pos.roomName == rmTrans.dst.roomName) {
+                // if at the end of the room, move to the next room
+                    creep.moveTo(new RoomPosition(rmTrans.src.x, rmTrans.src.y, rmTrans.src.roomName));
+//                    creep.memory.rtIndex++;
+                } else { //if not at end of room,
+                    creep.moveTo(new RoomPosition(rmTrans.dst.x, rmTrans.dst.y, rmTrans.dst.roomName));
+                }
+            }
         }
         // if creep is harvesting energy but is full
-        else if (creep.memory.working == false && creep.carry.energy == creep.carryCapacity) {
+        if (!creep.memory.working && creep.carry.energy == creep.carryCapacity){
             // switch state
             creep.memory.working = true;
         }
 
-        // if creep is supposed to transfer energy to the spawn or an extension
-        if (creep.memory.working == true) {
-            // find closest spawn or extension which is not full
-            var structure = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                // the second argument for findClosestByPath is an object which takes
-                // a property called filter which can be a function
-                // we use the arrow operator to define it
-                filter: (s) => s.energy < s.energyCapacity
-            });
-
-            // if we found one
-            if (structure != undefined) {
-                // try to transfer energy, if it is not in range
-                if (creep.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    // move towards it
-                    creep.moveTo(structure);//, [{reusePath}]);
-                }
-            }
-        }
-        // if creep is supposed to harvest energy from source
-        else {
-            // find closest source
-            
-            // if we found one
-            if (creep.memory.source != undefined) {
-                // try to transfer energy, if it is not in range
-                if (creep.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    // move towards it
-                    creep.moveTo(structure);//, [{reusePath}]);
-                }
-            }
-            var source = creep.pos.findClosestByPath(FIND_SOURCES);
-            // try to harvest energy, if the source is not in range
-            if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                // move towards the source
-                creep.moveTo(source)//, [{reusePath}];
-            }
-        }
     }
 };

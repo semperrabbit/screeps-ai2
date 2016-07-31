@@ -1,6 +1,9 @@
+require('prototype.Creep')();
+
 module.exports = {
     // a function to run the logic for this role
     run: function(creep) {
+        if(creep.spawning){ return;}
         // if creep is bringing energy to the spawn or an extension but has no energy left
         if (creep.memory.working == true && creep.carry.energy == 0) {
             // switch state

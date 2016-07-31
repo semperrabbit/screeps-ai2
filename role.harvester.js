@@ -1,6 +1,14 @@
+require('prototype.Creep')();
+
+var Utils = require('help.functions');
+//        Utils.pickupNearbyEnergy(creep);
+
 module.exports = {
     // a function to run the logic for this role
     run: function(creep) {
+        if(creep.spawning){ return;}
+//        Utils.pickupNearbyEnergy(creep);
+
         // if creep is bringing energy to the spawn or an extension but has no energy left
         if (creep.memory.working == true && creep.carry.energy == 0) {
             // switch state
@@ -25,6 +33,7 @@ module.exports = {
 
             // if we found one
             if (structure != undefined) {
+console.log('depositing to storage');
                 // try to transfer energy, if it is not in range
                 if (creep.transfer(structure, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     // move towards it
@@ -33,6 +42,7 @@ module.exports = {
             }else {
 
                 // so we have to use this
+console.log('depositing to storage');
                 target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (s) => ((s.structureType == STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] < s.storeCapacity) ||
                                     (s.structureType == STRUCTURE_STORAGE   && s.store[RESOURCE_ENERGY] < s.storeCapacity))
@@ -51,14 +61,22 @@ module.exports = {
         // if creep is supposed to harvest energy from source
         else {
             // find closest source
-//            console.log('Harvesting');
-            var target = undefined;
-            var source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);//, function(s){s.energy > 0});
-            // try to harvest energy, if the source is not in range
-            if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                // move towards the source
-                creep.moveTo(source)//, [{reusePath}];
-            }
+            harvest(creep);
         }
     }
 };
+
+var harvest = function(creep) {
+//    console.log('Harvesting');
+    var target = undefined;
+    var source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);//, function(s){s.energy > 0});
+
+    // try to harvest energy, if the source is not in range
+    if(!(source == undefined || source == null)){
+        if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+            // move towards the source
+            creep.moveTo(source)//, [{reusePath}];
+        }
+    }
+    source = creep.pos.findClosestByRange(FIND_STRUCTURES, {filter: function(c){return c.structureType == STRUCTURE_STORAGE}})
+}

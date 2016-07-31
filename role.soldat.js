@@ -6,10 +6,12 @@
  * var mod = require('role.soldat');
  * mod.thing == 'a thing'; // true
  */
+require('prototype.Creep')();
 
 module.exports = {
     run: function(creep) {
-var targ = creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
+        if(creep.spawning){ return;}
+        var targ = creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
             // try to harvest energy, if the source is not in range
             if (creep.attack(targ) == ERR_NOT_IN_RANGE) {
                 // move towards the source
