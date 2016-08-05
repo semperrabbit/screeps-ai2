@@ -1,21 +1,17 @@
 require('prototype.Creep')();
 
+var Cache = require('help.cache');
 var Utils = require('help.functions');
 
 module.exports = {
     // a function to run the logic for this role
-    run: function(creep) {
+    run: function(creep, cache) {
         if(creep.spawning){ return;}
         Utils.pickupNearbyEnergy(creep);
         // if creep is bringing energy to the controller but has no energy left
-        if (creep.memory.working == true && creep.carry.energy == 0) {
-            // switch state
-            creep.memory.working = false;
-        }
-        // if creep is harvesting energy but is full
-        else if (creep.memory.working == false && creep.carry.energy == creep.carryCapacity) {
-            // switch state
-            creep.memory.working = true;
+        switch(creep.carry.energy)
+        {   case 0:                    creep.memory.working = false;  break;
+            case creep.carryCapacity:  creep.memory.working = true;   break;
         }
 
         // if creep is supposed to transfer energy to the controller
@@ -31,14 +27,8 @@ module.exports = {
         }
         // if creep is supposed to harvest energy from source
         else {
-            // find closest source
-            var source = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {filter: function(s){return  s.structureType == STRUCTURE_STORAGE}});
-            // try to harvest energy, if the source is not in range
-            
-            if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                // move towards the source
-                creep.moveTo(source);
-            }
+            Utils.harvest(creep, cache);
         }
     }
 };
+

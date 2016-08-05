@@ -10,20 +10,26 @@ module.exports = {
 
 
         Utils.pickupNearbyEnergy(creep);
-        if(!creep.memory.source){
-            console.log('no source in memory')
+        if(!creep.memory.target){
+            console.log('no target in memory')
             return -1;
         }
-        var source    = Game.getObjectById(creep.memory.source);
-        var sourcePos = Utils.getObjectPosById(creep.memory.source);
-//console.log(creep.name + ': Source pos:'+sourcePos);
+        if(_.isUndefined(creep.memory.target))
+            creep.memory.target = creep.memory.target;
+
+
+        var target    = Game.getObjectById(creep.memory.target);
+        var targetPos = Utils.getObjectPosById(creep.memory.target);
+//console.log(creep.name + ': target pos:'+targetPos);
 
         // if creep is supposed to transfer energy to the spawn or an extension
-//                role working homeRoom source roomTransition rtIndex dir
+//                role working homeRoom target roomTransition rtIndex dir
         if (creep.memory.working) {
             if(creep.pos.roomName == creep.memory.homeRoom) {
+//console.log(creep.name + ' in homeRoom, running harvester');
                 roleHarvester.run(creep);
             } else { 
+//console.log(creep.name + ' not in home room, moving to homeroom');
                 var roomEnd = undefined;
                 var rmTrans = creep.memory.roomTransition[creep.memory.rtIndex];
                 if(creep.pos.x == rmTrans.src.x && creep.pos.y == rmTrans.src.y && 
@@ -36,15 +42,17 @@ module.exports = {
                 }
             
             }
-        }else {
-        // if creep is supposed to harvest energy from source
-        // role working homeRoom source roomTransition rtIndex dir
-            if(sourcePos.roomName == creep.pos.roomName) {
-            // if in the same room as the source
-                if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source, {reusePath: 10});
+        } else {
+        // if creep is supposed to harvest energy from target
+        // role working homeRoom target roomTransition rtIndex dir
+            if(targetPos.roomName == creep.pos.roomName) {
+            // if in the same room as the target
+//console.log(creep.name + ' in target room, harvesting');
+                if(creep.harvest(target) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, {reusePath: 10});
                 }
             } else { // not in the same room
+//console.log(creep.name + ' not in target room, running harvester');
                 var roomEnd = undefined;
                 var rmTrans = creep.memory.roomTransition[creep.memory.rtIndex];
                 if(creep.pos.x == rmTrans.dst.x && creep.pos.y == rmTrans.dst.y && 
@@ -58,10 +66,9 @@ module.exports = {
             }
         }
         // if creep is harvesting energy but is full
-        if (!creep.memory.working && creep.carry.energy == creep.carryCapacity){
-            // switch state
-            creep.memory.working = true;
+        switch(creep.carry.energy)
+        {   case 0:                    creep.memory.working = false;  break;
+            case creep.carryCapacity:  creep.memory.working = true;   break;
         }
-
     }
 };
