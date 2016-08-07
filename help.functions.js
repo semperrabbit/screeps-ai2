@@ -14,10 +14,38 @@ var Cache = require('help.cache');
 var LZString = require('help.LZString');
 
 function Utils() {};
+Utils.reportDuration = function(methodName, cpuUsed){
+    if(_.isUndefined(Memory.cpuLog)) Memory.cpuLog={};
+    for(let tick in Memory.cpuLog){
+        if(tick <= Game.time - Const.CPU_TRACK_TICKS)
+            delete Memory.cpuLog[tick];
+    }
 
+    Memory.cpuLog[Game.time] = _.merge(Memory.cpuLog[Game.time], {method: methodName, usage: cpuUsed})
+}
+Utils.cpuLog = function(checkpoint){
+    if(_.isUndefined(Memory.cpuLog)) Memory.cpuLog={};
+    for(let tick in Memory.cpuLog){
+        if(tick <= Game.time - Const.CPU_TRACK_TICKS)
+            delete Memory.cpuLog[tick];
+    }
 
-Utils.posEquals = function(pos1, pos2){};
-
+    var used = Utils.cpu();
+    switch(checkpoint) {
+        case null:
+        case undefined:
+        default:
+            Memory.cpuLog[Game.time] = used;
+            break;
+//            if(!_.isUndefined(Memory.cpuLog[Game.time])) != 'object') {
+//console.log('new Memory.cpuLog['+Game.time+']')
+//                Memory.cpuLog[Game.time] = {};
+//            }
+//            Memory.cpuLog[Game.time][checkpoint] = used;
+    }
+    return used;
+}
+Utils.posEquals = function(pos1, pos2){return pos1.x == pos2.x && pos1.y == pos2.y && pos1.roomName == pos2.roomName;};
 Utils.harvest = function(creep, cache) {
 
 
@@ -83,40 +111,18 @@ if memory is empty ,
 //console.log(storage)
         if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
             // move towards the storage
-console.log(creep.name+' moving to storage');
+//console.log(creep.name+' moving to storage');
             creep.moveTo(source);
         }
     }
-}
-Utils.cpuLog = function(checkpoint){
-    if(_.isUndefined(Memory.cpuLog)) Memory.cpuLog={};
-
-    for(let tick in Memory.cpuLog){
-        if(tick <= Game.time - 10)
-            delete Memory.cpuLog[tick];
-    }
-
-    var used = Utils.cpu();
-    switch(checkpoint) {
-        case null:
-        case undefined:
-        default:
-            Memory.cpuLog[Game.time] = used;
-            break;
-//            if(!_.isUndefined(Memory.cpuLog[Game.time])) != 'object') {
-//console.log('new Memory.cpuLog['+Game.time+']')
-//                Memory.cpuLog[Game.time] = {};
-//            }
-//            Memory.cpuLog[Game.time][checkpoint] = used;
-    }
-    return used;
 }
 
 //Utils.getCpuLog = function(){
 
 Utils.runZombie = function(creep, force){
+    
+    if(creep.memory.role=='miner')return;
     var ttl = creep.ticksToLive;
-
     if(force==true)ttl=0;
 
     if(ttl < Const.ZOMBIE_TICK && creep.memory.role != 'zombie')
@@ -151,6 +157,7 @@ Utils.runZombie = function(creep, force){
     
     return OK;
 }
+
 
 Utils.cpu = function(){return parseInt(Game.cpu.getUsed()*10000)/10000.0}
 
@@ -222,211 +229,6 @@ Utils.findStructuresByType = function(room, types) {
     return ret;
 }
 
-Utils.loadWallsInCache = function(cache) {
-    var walls = [];
-    var wallList = [];
-    for(let room in Game.rooms) {
-        if(Memory.rooms[room].isMine == true) {
-//            walls = Utils.findStructuresByType(Game.rooms[room], [STRUCTURE_WALL, STRUCTURE_RAMPART]);
-//            walls = [];
-            wallList = Game.rooms[room].find(FIND_STRUCTURES,
-                {filter: function(s){return s.structureType==STRUCTURE_WALL &&
-                (s.pos.x != 0) && (s.pos.y !=0) && (s.pos.x != 49) && (s.pos.y !=49) }});
-            for(let wall of wallList){walls.push(wall);}
-            wallList = Game.rooms[room].find(FIND_MY_STRUCTURES, {filter: {structureType: STRUCTURE_RAMPART}});
-            for(let wall of wallList){walls.push(wall);}
-        }
-        walls.sort(function(a,b){
-                if(a.structureType == b.structureType){ return a.hits-b.hits;}
-                if(a.structureType == STRUCTURE_RAMPART && b.structureType == STRUCTURE_WALL){
-                    if(a.hits != a.hitsMax && a.hits < b.hits) {
-                        return -1;
-                    } else {
-                        return 1;
-                    }
-                }
-                if(a.structureType == STRUCTURE_WALL && b.structureType == STRUCTURE_RAMPART){
-                    if(b.hits != b.hitsMax && a.hits > b.hits) {
-                        return 1;
-                    } else {
-                        return -1;
-                    }
-                }
-                return 0;
-            }
-        );
-    	if(!cache.get(room+'_walls')) {cache.set(room+'_walls', walls);}
-        walls = [];
-    }
-}
-
-Utils.initRoomsInMemory = function() {
-
-    if(_.isUndefined(Memory.rooms)) {
-        console.log('Memory.rooms doesnt exist')
-        Memory.rooms = {};
-    }
-    for(let room in Game.rooms) {
-        if(_.isUndefined(Memory.rooms[room])) {
-            console.log('Memory.rooms[ ' + room + '] doesnt exist')
-            Memory.rooms[room] = {};
-        }
-        if(_.isUndefined(Memory.rooms[room].types))
-            Memory.rooms[room].types = {};
-
-//        if(Memory.rooms[room].types['harvester'] == undefined)
-        Memory.rooms[room].types['harvester']    = {
-			total: 0, goalPercentage: Const.PERCENT_HARVESTERS,
-			currentPercentage: 0,
-			max: Const.MAX_HARVESTERS,
-			minExtensions: 0
-		}
-
-//        if(Memory.rooms[room].types['upgrader'] == undefined)
-        Memory.rooms[room].types['upgrader']     = {
-			total: 0,
-			goalPercentage: Const.PERCENT_UPGRADERS,
-			currentPercentage: 0,
-			max: Const.MAX_UPGRADERS,
-			minExtensions: 0,
-		}
-//        if(Memory.rooms[room].types['builder'] == undefined)
-        Memory.rooms[room].types['builder']      = {
-			total: 0,
-			goalPercentage: Const.PERCENT_BUILDERS,
-			currentPercentage: 0,
-			max: Const.MAX_BUILDERS,
-			minExtensions: 0
-		}
-//        if(Memory.rooms[room].types['repairer'] == undefined)
-        Memory.rooms[room].types['repairer']     = {
-			total: 0,
-			goalPercentage: Const.PERCENT_REPAIRERS,
-			currentPercentage: 0,
-			max: Const.MAX_REPAIRERS,
-			minExtensions: 0
-		}
-//        if(Memory.rooms[room].types['wallRepairer'] == undefined)
-        Memory.rooms[room].types['wallRepairer'] = {
-			total: 0,
-			goalPercentage: Const.PERCENT_WALLREPAIRERS,
-			currentPercentage: 0,
-			max: Const.MAX_WALLREPAIRERS,
-			minExtensions: 0
-		}
-//        if(Memory.rooms[room].types['soldat'] == undefined)
-        Memory.rooms[room].types['soldat']       = {
-			total: 0,
-			goalPercentage: Const.PERCENT_SOLDATS,
-			currentPercentage: 0,
-			max: Const.MAX_SOLDATS,
-			minExtensions: 0
-		}
-//        if(Memory.rooms[room].types['healer'] == undefined)
-        Memory.rooms[room].types['healer']       = {
-			total: 0,
-			goalPercentage: Const.PERCENT_HEALERS,
-			currentPercentage: 0,
-			max: Const.MAX_HEALERS,
-			minExtensions: 0
-		}
-//        if(Memory.rooms[room].types['scout'] == undefined)
-        Memory.rooms[room].types['scout']        = {
-			total: 0,
-			goalPercentage: Const.PERCENT_SCOUTS,
-			currentPercentage: 0,
-			max: Const.MAX_SCOUTS,
-			minExtensions: 0
-		
-        }
-//        if(Memory.rooms[room].types['remote'] == undefined)
-        Memory.rooms[room].types['remote']      = {
-			total: 0,
-			goalPercentage: Const.PERCENT_REMOTES,
-			currentPercentage: 0,
-			max: Const.MAX_REMOTES,
-			minExtensions: 0
-		
-        }
-//        if(Memory.rooms[room].types['ambassador'] == undefined)
-        Memory.rooms[room].types['ambassador']   = {
-			total: 0,
-			goalPercentage: Const.PERCENT_AMBASSADORS,
-			currentPercentage: 0,
-			max: Const.MAX_AMBASSADORS,
-			minExtensions: 0
-		}
-//        if(Memory.rooms[room].types['deconstructor'] == undefined)
-        Memory.rooms[room].types['deconstructor']   = {
-			total: 0,
-			goalPercentage: Const.PERCENT_AMBASSADORS,
-			currentPercentage: 0,
-			max: Const.MAX_AMBASSADORS,
-			minExtensions: 0
-		}
-        Memory.rooms[room].types['zombie']   = {
-			total: 0,
-			goalPercentage: 0,
-			currentPercentage: 0,
-			max: 0,
-			minExtensions: 0
-		}
-
-//		for(let type in Memory.rooms[currRoom].types){Memory.rooms[currRoom].types[type].total=0};
-
-        Memory.rooms[room].isMine     = false;
-        if(Game.rooms[room].find(FIND_MY_STRUCTURES)) {Memory.rooms[room].isMine = true;}
-
-        Memory.rooms[room].hasThreats = false;
-        var threats = [];
-        for(struc of Game.rooms[room].find(FIND_HOSTILE_STRUCTURES)){ threats.push(struc); }
-        for(struc of Game.rooms[room].find(FIND_HOSTILE_CREEPS))    { threats.push(struc); }
-        if(threats.length > 0) {Memory.rooms[room].hasThreats = true;}
-
-        Memory.rooms[room].creepsInRoom = [];
-        for(var creep in Game.creeps) {
-            var currRoom = Game.creeps[creep].pos.roomName;
-            var currRole = Game.creeps[creep].memory.role;
-
-            if(currRole == 'remote') {
-                Memory.rooms[Game.creeps[creep].memory.homeRoom].types[currRole].total++;
-                Memory.rooms[Game.creeps[creep].memory.homeRoom].creepsInRoom.push(creep);
-            } else if (! _.has(Memory.rooms[currRoom].types, currRole)){
-                Utils.createTypeDistribution(currRoom, currRole);
-                Memory.rooms[currRoom].types[currRole].total++;
-                Memory.rooms[currRoom].creepsInRoom.push(creep);
-            } else if(creep != 0 || _.has(Memory.rooms[currRoom].types, currRole)){
-//                console.log(creep);
-//                console.log(''+currRole);
-                Memory.rooms[currRoom].types[currRole].total++;
-                Memory.rooms[currRoom].creepsInRoom.push(creep);
-            }
-        }
-
-        if(_.isUndefined(Memory.rooms[room].sources)){
-            Memory.rooms[room].sources = {};
-            var sourceList = Game.rooms[room].find(FIND_SOURCES);
-            for (let i in sourceList) {
-                Memory.rooms[room].sources[sourceList[i].id]=sourceList[i].pos;
-            }
-        }
-
-        Memory.rooms[room].energyDeposits = [];
-        var energyDeposits = Game.rooms[room].find(FIND_SOURCES);
-        for(let i in energyDeposits) {
-            Memory.rooms[room].energyDeposits.push(     energyDeposits[i].pos);
-            Memory.rooms[room].energyDeposits[i].id   = energyDeposits[i].id;
-        }
-
-        Memory.rooms[room].mineralDeposits = [];
-        var mineralDeposits = Game.rooms[room].find(FIND_MINERALS);
-        for(let i in mineralDeposits) {
-            Memory.rooms[room].mineralDeposits.push(     mineralDeposits[i].pos);
-            Memory.rooms[room].mineralDeposits[i].type = mineralDeposits[i].mineralType;
-            Memory.rooms[room].mineralDeposits[i].id   = mineralDeposits[i].id;
-        }
-    }
-}
 
 Utils.findSources = function() {
     

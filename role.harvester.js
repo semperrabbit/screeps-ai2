@@ -9,6 +9,8 @@ module.exports = {
     // a function to run the logic for this role
     run: function(creep) {
         if(creep.spawning){ return;}
+        if(creep.memory.imHome == false || !creep.memory.imHome)
+        {   creep.moveToHomeRoom();}
         Utils.pickupNearbyEnergy(creep);
 
         // if creep is bringing energy to the spawn or an extension but has no energy left
@@ -51,13 +53,23 @@ module.exports = {
                 });
 
                 // if we find a wall that has to be repaired
-                if(target != undefined && !Memory.sources[creep.memory.source].hasMiner) {
+                if(target != undefined && !Memory.sources[creep.memory.source].hasMiner ) {
                     // try to deposit to it, if not in range
                     if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                         // move towards it
                         creep.moveTo(target);
                     }
-                } else {
+                } else if(creep.room.storage){
+                target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: function(s){return ((s.structureType == STRUCTURE_STORAGE   && s.store[RESOURCE_ENERGY] < s.storeCapacity))}
+                });
+
+                    // try to deposit to it, if not in range
+                    if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                        // move towards it
+                        creep.moveTo(target);
+                    }
+                }else{
                     roleBuilder.run(creep);
                 }
                 

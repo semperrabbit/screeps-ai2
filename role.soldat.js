@@ -1,39 +1,39 @@
-/*
- * Module code goes here. Use 'module.exports' to export things:
- * module.exports.thing = 'a thing';
- *
- * You can import it from another modules like this:
- * var mod = require('role.soldat');
- * mod.thing == 'a thing'; // true
- */
-require('prototype.Creep')();
-
 module.exports = {
     run: function(creep) {
-        var invadeRoom = Game.flags['Attack'].pos.roomName
-        var flag = Game.flags['Attack'].pos
+        if (Game.flags['Attack']){
+        var invadeRoom = Game.flags['Attack'].pos.roomName;
+        var flag = Game.flags['Attack'].pos;}
         var targ2 = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-        var targ = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES);
+        var targ = creep.pos.findClosestByRange(FIND_HOSTILE_STRUCTURES, {
+                    filter: (s) => s.structureType != STRUCTURE_CONTROLLER});
 
-        if(targ2){
-            if (creep.attack(targ2) == ERR_NOT_IN_RANGE)
+        if (targ2){
+            code=creep.attack(targ2)
+            console.log(code)
+            if (code == ERR_NOT_IN_RANGE) {
                 if(creep.moveTo(targ2) == ERR_NO_PATH)
 					creep.moveTo(targ2, {ignoreDestructibleStructures: true})
+            }
         }
         else if(targ){
-            if (creep.attack(targ) == ERR_NOT_IN_RANGE)
+            code=creep.attack(targ)
+            console.log(code)
+            if (code == ERR_NOT_IN_RANGE) {
                 if(creep.moveTo(targ) == ERR_NO_PATH)
-					creep.moveTo(targ, {ignoreDestructibleStructures: true})
+					creep.moveTo(targ, { ignoreDestructibleStructures: true})
+            }
         }
-        else if(invadeRoom != 'undefined') {
-        	if(creep.pos.roomName != invadeRoom) // edited to include .pos
+        else if (invadeRoom != 'undefined') {
+            creep.moveTo(Game.flags.Attack, {reusePath:3}); //new
+        	/*if(creep.pos.roomName != invadeRoom) 
 			{
 				var exitDir = Game.map.findExit(creep.room.name, invadeRoom);
 				var Exit = creep.pos.findClosestByRange(exitDir);
 				creep.moveTo(Exit), [{reusePath: 3}];
-			}
+			}*/
         }
-		else
-			creep.moveTo(flag);
+		//else creep.moveTo(flag);
+			
+    
     }
 };

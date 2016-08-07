@@ -7,6 +7,8 @@ module.exports = {
     // a function to run the logic for this role
     run: function(creep, cache) {
         if(creep.spawning){ return;}
+        if(creep.memory.imHome == false || !creep.memory.imHome)
+        {   creep.moveToHomeRoom();}
         Utils.pickupNearbyEnergy(creep);
         // if creep is bringing energy to the controller but has no energy left
         switch(creep.carry.energy)
@@ -22,7 +24,7 @@ module.exports = {
             // try to upgrade the controller
             if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
                 // if not in range, move towards the controller
-                creep.moveTo(creep.room.controller);
+                creep.moveTo(Game.rooms[creep.memory.homeRoom].controller);
             }
         }
         // if creep is supposed to harvest energy from source

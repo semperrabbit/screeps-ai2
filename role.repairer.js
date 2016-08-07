@@ -7,6 +7,8 @@ module.exports = {
     // a function to run the logic for this role
     run: function(creep) {
         if(creep.spawning){ return;}
+        if(creep.memory.imHome == false || !creep.memory.imHome)
+        {   creep.moveToHomeRoom();}
         Utils.pickupNearbyEnergy(creep);
        // if creep is trying to repair something but has no energy left
         switch(creep.carry.energy)

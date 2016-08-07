@@ -7,6 +7,9 @@ module.exports = {
     run: function(creep) {
         if(creep.spawning){ return;}
 
+        if(creep.memory.imHome == false)
+        {   creep.moveToHomeRoom();}
+
         // if creep is trying to complete a constructionSite but has no energy left
         switch(creep.carry.energy)
         {   case 0:                    creep.memory.working = false;  break;

@@ -10,6 +10,7 @@ var Init  = require('help.initialization');
 var Utils = require('help.functions');
 
 
+var roleClaimer = require('role.claimer');
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
 var roleBuilder = require('role.builder');
@@ -27,17 +28,17 @@ module.exports.loop = function () {
 //    console.log('Start Decomp:      ' +Game.cpu.getUsed());
     Utils.decompressMemory();
     Utils.garbageCollect();
+    var cache = new Cache();
+    cache.set('swat', true);
 
     Init.sourcesInMemory();
-    Utils.initRoomsInMemory();
+    Init.roomsInMemory();
+    Init.loadWallsInCache(cache);
 
     var output = '';
-    var cache = new Cache();
 
-    Utils.loadWallsInCache(cache);
 
     Utils.cpuLog('initDone');
-
     for(let room in Game.rooms) {
 
         //Run for each tower in my room, run the structure.tower module
@@ -51,8 +52,11 @@ module.exports.loop = function () {
             creep = Game.creeps[name];
             if(parseInt(Math.random()*10000));
             Utils.runZombie(creep);
+            creep.moveToHomeRoom();
             var roleName = creep.memory.role;
             switch(roleName) {
+                case 'claimer':
+                    roleClaimer.run(creep, cache);
                 case 'harvester':
                     roleHarvester.run(creep, cache);
                     break;
@@ -69,7 +73,7 @@ module.exports.loop = function () {
                     roleWallRepairer.run(creep, cache);
                     break;
                 case 'soldat':
-                    roleHarvester.run(creep, cache);
+                    roleSoldat.run(creep);
                     break;
                 case 'healer':
                     roleHealer.run(creep, cache);
@@ -100,17 +104,22 @@ module.exports.loop = function () {
 	if(!(Game.time % Const.HEADER_FREQUENCY)) {
 	       output += 'Room\tHarves\tUpgrad\tBuilde\tRepair\tWallRe\tSoldat\tHealer\tRemote\tScouts\tAmbass\tGoal %\tNext Death ttl/name/type\t';
 	}
-    for(let room in Game.rooms) {
+    for(let roomName in Game.rooms) {
         if(Game.rooms.length > 1) {
             output+='\n'
         }
-        var roomObject = Game.rooms[room];
+        var roomObject = Game.rooms[roomName];
         var energy = roomObject.energyCapacityAvailable;
+//console.log(roomObject.energyCapacityAvailable)
+        if     (roomObject.energyCapacityAvailable <300)energy=500;
+        else if(roomObject.energyCapacityAvailable <500)energy=800;
+        var spawn = StructureSpawn.getSpawnFor(energy);
+//console.log(energy);
         var name = 0;
-        var typeDistribution = Memory.rooms[room].types;
+        var typeDistribution = Memory.rooms[roomName].types;
         var currTotal = 0;
         var total = 0;
-        var nextDeath = Utils.getNextExpectedDeathInRoom(room);
+        var nextDeath = Utils.getNextExpectedDeathInRoom(roomName);
 
         for(let types in typeDistribution) {
             currTotal += typeDistribution[types].total;
@@ -119,7 +128,7 @@ module.exports.loop = function () {
 
         if(output != ''){output += '\n';}
         output += 
-            room + '\t' +
+            roomName + '\t' +
             typeDistribution['harvester'].total    + '/' + Const.MAX_HARVESTERS     + '\t' +
             typeDistribution['upgrader'].total     + '/' + Const.MAX_UPGRADERS      + '\t' +
             typeDistribution['builder'].total      + '/' + Const.MAX_BUILDERS       + '\t' + 
@@ -138,64 +147,74 @@ module.exports.loop = function () {
            
         }
 
-        if(Game.rooms[room].controller.my){
-            Game.spawns.Spawn1.createMiner(energy, 'miner');
-            switch(true){
-                case (typeDistribution['harvester'].total < typeDistribution['harvester'].max) :
-                    output += 'Trying to build Harvester with ' + energy + ' energy';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'harvester');
-            
-                    // if spawning failed and we have no harvesters left
-                    if (name == ERR_NOT_ENOUGH_ENERGY && typeDistribution['harvester'].total == 0) {
-                        // spawn one with what is available
-                        name = Game.spawns.Spawn1.createCustomCreep(
-                            Game.spawns.Spawn1.room.energyAvailable, 'harvester');
-                    }
-                    break;
-                // if not enough upgraders
-                case (typeDistribution['upgrader'].total < typeDistribution['upgrader'].max):
-                    output += 'Trying to build Upgrader';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'upgrader', cache);
-                    break;
-                // if not enough repairers
-                case (typeDistribution['repairer'].total < typeDistribution['repairer'].max):
-                    output += 'Trying to build Repairer';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'repairer', cache);
-                    break;
-                // if not enough builders
-                case (typeDistribution['builder'].total < typeDistribution['builder'].max):
-                    output += 'Trying to build Builder';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'builder', cache);
-                    break;
-                // if not enough wallRepairers
-                case (typeDistribution['wallRepairer'].total < typeDistribution['wallRepairer'].max):
-                    output += 'Trying to build WallUpgrader';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'wallRepairer', cache);
-                    break;
-                case (typeDistribution['soldat'].total < typeDistribution['soldat'].max):
-                    output += 'Trying to build Soldat';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'soldat', cache);
-                    break;
-                case (typeDistribution['healer'].total < typeDistribution['healer'].max):
-                    output += 'Trying to build Healer';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'healer', cache);
-                    break;
-                case (typeDistribution['remote'].total < typeDistribution['remote'].max):
-                    output += 'Trying to build Remote';
-                    // try to spawn one
-                    name = Game.spawns.Spawn1.createCustomCreep(energy, 'remote', cache);
-                    break;
-                default:
-                    // else try to spawn a builder
-            //        name = Game.spawns.Spawn1.createCustomCreep(energy, 'wallRepairer');
-                    break;
+        if(roomObject.controller.my){
+
+            if(spawn && !(spawn<0)){
+//                if(!_.isUndefined(Game.flags.NeedReserve) && StructureSpawn.getSpawnFor(650))
+//                    StructureSpawn.getSpawnFor(650).createCustomCreep(energy, 'claimer', spawn.room.name, cache)
+                try{
+                    StructureSpawn.getSpawnFor(energy, roomName).createMiner(energy, 'miner', roomName, cache);
+                }catch(e){}
+
+                switch(true){
+                    case (_.isUndefined(spawn) || spawn == [] || spawn < 0): break;
+    
+                    case (typeDistribution['harvester'].total < typeDistribution['harvester'].max) :
+                        output += 'Trying to build Harvester with ' + energy + ' energy';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'harvester', roomName, cache);
+                
+                        // if spawning failed and we have no harvesters left
+                        if (name == ERR_NOT_ENOUGH_ENERGY && typeDistribution['harvester'].total == 0) {
+                            // spawn one with what is available
+                            name = spawn.createCustomCreep(
+                                spawn.room.energyAvailable, 'harvester', roomName);
+                        }
+                        break;
+                    // if not enough upgraders
+                    case (typeDistribution['upgrader'].total < typeDistribution['upgrader'].max):
+                        output += 'Trying to build Upgrader';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'upgrader', roomName, cache);
+                        break;
+                    // if not enough repairers
+                    case (typeDistribution['repairer'].total < typeDistribution['repairer'].max):
+                        output += 'Trying to build Repairer';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'repairer', roomName, cache);
+                        break;
+                    // if not enough builders
+                    case (typeDistribution['builder'].total < typeDistribution['builder'].max):
+                        output += 'Trying to build Builder';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'builder', roomName, cache);
+                        break;
+                    // if not enough wallRepairers
+                    case (typeDistribution['wallRepairer'].total < typeDistribution['wallRepairer'].max):
+                        output += 'Trying to build WallUpgrader';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'wallRepairer', roomName, cache);
+                        break;
+                    case (typeDistribution['soldat'].total < typeDistribution['soldat'].max):
+                        output += 'Trying to build Soldat';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'soldat', roomName, cache);
+                        break;
+                    case (typeDistribution['healer'].total < typeDistribution['healer'].max):
+                        output += 'Trying to build Healer';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'healer', roomName, cache);
+                        break;
+                    case (typeDistribution['remote'].total < typeDistribution['remote'].max):
+                        output += 'Trying to build Remote';
+                        // try to spawn one
+                        name = spawn.createCustomCreep(energy, 'remote', roomName , cache);
+                        break;
+                    default:
+                        // else try to spawn a builder
+                //        name = spawn.createCustomCreep(energy, 'wallRepairer');
+                        break;
+                }
             }
         }
 
@@ -233,3 +252,18 @@ module.exports.loop = function () {
     output+='\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tCPU: '+Memory.cpuLog[Game.time];
     console.log(output);
 };
+
+function doGameLoopMethod(theMethod){
+    var cpuNow = Game.cpu.getUsed();
+    try{
+        theMethod();
+    }catch (err){
+        if(!isNullOrUndefined(err))
+        {
+            Game.notify("Error in main loop logic: \n" + err + "\n On line " + err.lineNumber);
+            log("Error in main loop logic\n" +err + "\n" + err.stack, "error");
+        }
+    }
+    var cpuSpend = Game.cpu.getUsed() - cpuNow;
+    Utils.reportDuration(theMethod.name, cpuSpend);
+}
