@@ -1,4 +1,5 @@
 require('prototype.Source')();
+require('prototype.Structure')();
 
 var Cache = require('help.cache');
 var Utils = require('help.functions');
@@ -108,14 +109,34 @@ module.exports = function() {
     // create a new function for StructureSpawn
     StructureSpawn.prototype.createMiner = function(energy, roleName, roomName, cache) {
         if(_.isUndefined(Game.rooms[roomName]))throw('Room '+roomName+' doesnt exist')
+        if(_.isUndefined(this.memory.lastSpawnForDifferentRoom))
+            this.memory.lastSpawnForDifferentRoom = (this.room.name != roomName);
+
+        switch(this.memory.lastSpawnForDifferentRoom){
+            case true:
+                if(this.room.name != roomName)
+                    return -20;
+                else
+                    this.memory.lastSpawnForDifferentRoom = false;
+                break;
+            case false:
+                if(this.room.name != roomName)
+                    this.memory.lastSpawnForDifferentRoom = true;
+                break;
+        }
+
+        if(this.room.name != roomName && Game.rooms[roomName] && Game.rooms[roomName].controller.level > 3)
+            return -20;
+
+
 //            roomName = this.room.name;
-//console.log('Running miner spawn for '+roomName)        
+console.log('Running miner spawn for '+roomName)        
         var targetSource = undefined;
         for(sourceName in Memory.rooms[roomName].sources){
-//console.log(sourceName+' has miner: '+Memory.sources[sourceName].hasMiner)
+console.log(sourceName+' has miner: '+Memory.sources[sourceName].hasMiner)
             if(!_.isUndefined(Memory.sources[sourceName].hasMiner) && !Memory.sources[sourceName].hasMiner){
                 targetSource = sourceName;
-//console.log(targetSource+ ' needs miner')
+console.log(targetSource+ ' needs miner')
                 break;
             }
         }
@@ -146,6 +167,7 @@ console.log('createMinerCreep('+body+', undefined, {role: '+roleName+', source: 
 }
 var AddToSpawn = function(){};
 AddToSpawn.getSpawnFor = function (energy, roomObject) {
+    if(typeof roomObject == 'string')roomObject = Game.rooms[roomObject];
     var targetSpawn = undefined;
     switch (roomObject){
     case null:

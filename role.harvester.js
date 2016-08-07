@@ -96,6 +96,15 @@ var harvest = function(creep) {
     else
         source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE)//, {filter: function(s){s.energy > 0}});
 
+    if(!source.memory.hasMiner && source.memory.container){
+//console.log('doesnt have miner but does have container')
+        cont = Game.getObjectById(source.memory.container);
+        if(cont && (cont.store.energy / cont.storeCapacity) > .1)
+//console.log('pulling from container')
+            if(creep.withdraw(cont, 'energy') == ERR_NOT_IN_RANGE)
+                creep.moveTo(cont);
+        
+    }
 
     // try to harvest energy, if the source is not in range
     if(!(source == undefined || source == null)){

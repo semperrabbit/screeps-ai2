@@ -38,7 +38,6 @@ module.exports.loop = function () {
     var output = '';
 
 
-    Utils.cpuLog('initDone');
     for(let room in Game.rooms) {
 
         //Run for each tower in my room, run the structure.tower module
@@ -98,11 +97,10 @@ module.exports.loop = function () {
         }
     }
 
-    Utils.cpuLog('roomLoopDone');
 
 	
 	if(!(Game.time % Const.HEADER_FREQUENCY)) {
-	       output += 'Room\tHarves\tUpgrad\tBuilde\tRepair\tWallRe\tSoldat\tHealer\tRemote\tScouts\tAmbass\tGoal %\tNext Death ttl/name/type\t';
+	       output += 'Room\tHarves\tMiner\tUpgrad\tBuilde\tRepair\tWallRe\tSoldat\tHealer\tRemote\tScouts\tAmbass\tGoal %\tNext Death ttl/name/type\t';
 	}
     for(let roomName in Game.rooms) {
         if(Game.rooms.length > 1) {
@@ -112,100 +110,112 @@ module.exports.loop = function () {
         var energy = roomObject.energyCapacityAvailable;
 //console.log(roomObject.energyCapacityAvailable)
         if     (roomObject.energyCapacityAvailable <300)energy=500;
-        else if(roomObject.energyCapacityAvailable <500)energy=800;
-        var spawn = StructureSpawn.getSpawnFor(energy);
-//console.log(energy);
+//        else if(roomObject.energyCapacityAvailable <500)energy=800;
+        var spawn;
+        if(roomObject.controller.level >=3)spawn = StructureSpawn.getSpawnFor(energy, roomObject);
+        else                               spawn = StructureSpawn.getSpawnFor(energy);
+
+        if(!spawn){
+            spawns = roomObject.find(FIND_STRUCTURE, {filter: (s)=> s.structureType==STRUCTURE_SPAWN});
+            if(spawns.length) spawn = spawns[0];
+        }
+
         var name = 0;
-        var typeDistribution = Memory.rooms[roomName].types;
+        var typeDist = Memory.rooms[roomName].types;
         var currTotal = 0;
         var total = 0;
         var nextDeath = Utils.getNextExpectedDeathInRoom(roomName);
 
-        for(let types in typeDistribution) {
-            currTotal += typeDistribution[types].total;
-            total     += typeDistribution[types].max;
+        for(let types in typeDist) {
+            currTotal += typeDist[types].total;
+            total     += typeDist[types].max;
         }
 
         if(output != ''){output += '\n';}
         output += 
             roomName + '\t' +
-            typeDistribution['harvester'].total    + '/' + Const.MAX_HARVESTERS     + '\t' +
-            typeDistribution['upgrader'].total     + '/' + Const.MAX_UPGRADERS      + '\t' +
-            typeDistribution['builder'].total      + '/' + Const.MAX_BUILDERS       + '\t' + 
-            typeDistribution['repairer'].total     + '/' + Const.MAX_REPAIRERS      + '\t' +
-            typeDistribution['wallRepairer'].total + '/' + Const.MAX_WALLREPAIRERS  + '\t' +
-            typeDistribution['soldat'].total       + '/' + Const.MAX_SOLDATS        + '\t' +
-            typeDistribution['healer'].total       + '/' + Const.MAX_HEALERS        + '\t' +
-            typeDistribution['remote'].total       + '/' + Const.MAX_REMOTES        + '\t' +
-            typeDistribution['scout'].total        + '/' + Const.MAX_SCOUTS         + '\t' +
-            typeDistribution['ambassador'].total   + '/' + Const.MAX_AMBASSADORS    + '\t' +
+            typeDist['harvester'].total    + '/' + Const.MAX_HARVESTERS     + '\t' +
+            typeDist['miner'].total        + '/' + Const.MAX_MINERS     + '\t' +
+            typeDist['upgrader'].total     + '/' + Const.MAX_UPGRADERS      + '\t' +
+            typeDist['builder'].total      + '/' + Const.MAX_BUILDERS       + '\t' + 
+            typeDist['repairer'].total     + '/' + Const.MAX_REPAIRERS      + '\t' +
+            typeDist['wallRepairer'].total + '/' + Const.MAX_WALLREPAIRERS  + '\t' +
+            typeDist['soldat'].total       + '/' + Const.MAX_SOLDATS        + '\t' +
+            typeDist['healer'].total       + '/' + Const.MAX_HEALERS        + '\t' +
+            typeDist['remote'].total       + '/' + Const.MAX_REMOTES        + '\t' +
+            typeDist['scout'].total        + '/' + Const.MAX_SCOUTS         + '\t' +
+            typeDist['ambassador'].total   + '/' + Const.MAX_AMBASSADORS    + '\t' +
             parseInt(currTotal/total*10000)/100.0 + '%' + '\t' + nextDeath.ttl      + ' / ' +
             nextDeath.name + ' / ' + nextDeath.role + '\t';
     
         // if not enough harvesters
-        for(let type in typeDistribution){
+        for(let type in typeDist){
            
         }
 
         if(roomObject.controller.my){
 
+            if(_.isUndefined(spawn.createCustomCreep) && typeDist['harvester'].total == 0)
+            {
+                name = StructureSpawn.getSpawnFor(roomObject.energyAvailable, roomName).createCustomCreep(
+                    roomObject.energyAvailable, 'harvester', roomName);
+                console.log("oh shit: "+roomName+' spawning '+name)
+
+            
+            }
+
             if(spawn && !(spawn<0)){
 //                if(!_.isUndefined(Game.flags.NeedReserve) && StructureSpawn.getSpawnFor(650))
 //                    StructureSpawn.getSpawnFor(650).createCustomCreep(energy, 'claimer', spawn.room.name, cache)
-                try{
-                    StructureSpawn.getSpawnFor(energy, roomName).createMiner(energy, 'miner', roomName, cache);
-                }catch(e){}
 
                 switch(true){
-                    case (_.isUndefined(spawn) || spawn == [] || spawn < 0): break;
+                    case (_.isUndefined(spawn) || spawn == [] || spawn < 0):
+                        break;
     
-                    case (typeDistribution['harvester'].total < typeDistribution['harvester'].max) :
+                    case (typeDist['harvester'].total < typeDist['harvester'].max) :
                         output += 'Trying to build Harvester with ' + energy + ' energy';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'harvester', roomName, cache);
-                
-                        // if spawning failed and we have no harvesters left
-                        if (name == ERR_NOT_ENOUGH_ENERGY && typeDistribution['harvester'].total == 0) {
-                            // spawn one with what is available
-                            name = spawn.createCustomCreep(
-                                spawn.room.energyAvailable, 'harvester', roomName);
-                        }
+                        break;
+                    case (typeDist['miner'].total < typeDist['miner'].max && roomObject.memory.needsMiner) :
+                        output += 'Trying to build Miner';
+                        spawn.createMiner(energy, 'miner', roomName, cache);
                         break;
                     // if not enough upgraders
-                    case (typeDistribution['upgrader'].total < typeDistribution['upgrader'].max):
+                    case (typeDist['upgrader'].total < typeDist['upgrader'].max):
                         output += 'Trying to build Upgrader';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'upgrader', roomName, cache);
                         break;
                     // if not enough repairers
-                    case (typeDistribution['repairer'].total < typeDistribution['repairer'].max):
+                    case (typeDist['repairer'].total < typeDist['repairer'].max):
                         output += 'Trying to build Repairer';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'repairer', roomName, cache);
                         break;
                     // if not enough builders
-                    case (typeDistribution['builder'].total < typeDistribution['builder'].max):
+                    case (typeDist['builder'].total < typeDist['builder'].max):
                         output += 'Trying to build Builder';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'builder', roomName, cache);
                         break;
                     // if not enough wallRepairers
-                    case (typeDistribution['wallRepairer'].total < typeDistribution['wallRepairer'].max):
+                    case (typeDist['wallRepairer'].total < typeDist['wallRepairer'].max):
                         output += 'Trying to build WallUpgrader';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'wallRepairer', roomName, cache);
                         break;
-                    case (typeDistribution['soldat'].total < typeDistribution['soldat'].max):
+                    case (typeDist['soldat'].total < typeDist['soldat'].max):
                         output += 'Trying to build Soldat';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'soldat', roomName, cache);
                         break;
-                    case (typeDistribution['healer'].total < typeDistribution['healer'].max):
+                    case (typeDist['healer'].total < typeDist['healer'].max):
                         output += 'Trying to build Healer';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'healer', roomName, cache);
                         break;
-                    case (typeDistribution['remote'].total < typeDistribution['remote'].max):
+                    case (typeDist['remote'].total < typeDist['remote'].max):
                         output += 'Trying to build Remote';
                         // try to spawn one
                         name = spawn.createCustomCreep(energy, 'remote', roomName , cache);
@@ -218,7 +228,6 @@ module.exports.loop = function () {
             }
         }
 
-    Utils.cpuLog('spawnDone');
 
 //console.log(name);
         // print name to console if spawning was a success
@@ -248,8 +257,9 @@ module.exports.loop = function () {
 
     Utils.compressMemory();
 
-    Utils.cpuLog('end');
-    output+='\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tCPU: '+Memory.cpuLog[Game.time];
+//    Utils.cpuLog('end');
+    Utils.reportDuration('total', Utils.cpu());
+    output+='\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tCPU: '+Utils.getDuration('total', null);
     console.log(output);
 };
 

@@ -51,7 +51,7 @@ module.exports = {
                 }
             }
 
-            if(rampartTarget.hits != rampartTarget.hitsMax && rampartTarget.hits < wallTarget.hits) {
+            if(rampartTarget && rampartTarget.hits != rampartTarget.hitsMax && rampartTarget.hits < wallTarget.hits) {
                 target = rampartTarget;
             } else {
                 target = wallTarget;

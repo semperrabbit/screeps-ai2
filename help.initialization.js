@@ -28,7 +28,6 @@ Init.roomsInMemory = function() {
             delete Memory.rooms[room].types.undefined;
 
 
-//        if(Memory.rooms[room].types['harvester'] == undefined)
         Memory.rooms[room].types['claimer']    = {
 			total: 0, goalPercentage: Const.PERCENT_HARVESTERS,
 			currentPercentage: 0,
@@ -41,8 +40,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_HARVESTERS,
 			minExtensions: 0
 		}
-
-//        if(Memory.rooms[room].types['upgrader'] == undefined)
         Memory.rooms[room].types['upgrader']     = {
 			total: 0,
 			goalPercentage: Const.PERCENT_UPGRADERS,
@@ -50,7 +47,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_UPGRADERS,
 			minExtensions: 0,
 		}
-//        if(Memory.rooms[room].types['builder'] == undefined)
         Memory.rooms[room].types['builder']      = {
 			total: 0,
 			goalPercentage: Const.PERCENT_BUILDERS,
@@ -58,7 +54,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_BUILDERS,
 			minExtensions: 0
 		}
-//        if(Memory.rooms[room].types['repairer'] == undefined)
         Memory.rooms[room].types['repairer']     = {
 			total: 0,
 			goalPercentage: Const.PERCENT_REPAIRERS,
@@ -66,7 +61,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_REPAIRERS,
 			minExtensions: 0
 		}
-//        if(Memory.rooms[room].types['miner'] == undefined)
         Memory.rooms[room].types['miner']     = {
 			total: 0,
 			goalPercentage: Const.PERCENT_MINERS,
@@ -74,7 +68,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_MINERS,
 			minExtensions: 0
 		}
-//        if(Memory.rooms[room].types['wallRepairer'] == undefined)
         Memory.rooms[room].types['wallRepairer'] = {
 			total: 0,
 			goalPercentage: Const.PERCENT_WALLREPAIRERS,
@@ -82,7 +75,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_WALLREPAIRERS,
 			minExtensions: 0
 		}
-//        if(Memory.rooms[room].types['soldat'] == undefined)
         Memory.rooms[room].types['soldat']       = {
 			total: 0,
 			goalPercentage: Const.PERCENT_SOLDATS,
@@ -90,7 +82,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_SOLDATS,
 			minExtensions: 0
 		}
-//        if(Memory.rooms[room].types['healer'] == undefined)
         Memory.rooms[room].types['healer']       = {
 			total: 0,
 			goalPercentage: Const.PERCENT_HEALERS,
@@ -98,7 +89,6 @@ Init.roomsInMemory = function() {
 			max: Const.MAX_HEALERS,
 			minExtensions: 0
 		}
-//        if(Memory.rooms[room].types['scout'] == undefined)
         Memory.rooms[room].types['scout']        = {
 			total: 0,
 			goalPercentage: Const.PERCENT_SCOUTS,
@@ -107,7 +97,6 @@ Init.roomsInMemory = function() {
 			minExtensions: 0
 		
         }
-//        if(Memory.rooms[room].types['remote'] == undefined)
         Memory.rooms[room].types['remote']      = {
 			total: 0,
 			goalPercentage: Const.PERCENT_REMOTES,
@@ -116,7 +105,6 @@ Init.roomsInMemory = function() {
 			minExtensions: 0
 		
         }
-//        if(Memory.rooms[room].types['ambassador'] == undefined)
         Memory.rooms[room].types['ambassador']   = {
 			total: 0,
 			goalPercentage: Const.PERCENT_AMBASSADORS,
@@ -151,23 +139,25 @@ Init.roomsInMemory = function() {
         for(struc of Game.rooms[room].find(FIND_HOSTILE_CREEPS))    { threats.push(struc); }
         if(threats.length > 0) {Memory.rooms[room].hasThreats = true;}
 
-        Memory.rooms[room].creepsInRoom = [];
-        for(var creep in Game.creeps) {
+        creepsInRoomObjects =  Game.rooms[room].find(FIND_MY_CREEPS);
+        creepsInRoomNames = [];
+        
+        _.forEach(creepsInRoomObjects, function(c){creepsInRoomNames.push(c.name)});
+//console.log(creepsInRoomNames)
+        Memory.rooms[room].creepsInRoom = creepsInRoomNames;
+
+        for(var creep of creepsInRoomNames) {
+//console.log(creep)
             var currRoom = Game.creeps[creep].memory.homeRoom || Game.creeps[creep].pos.roomName;
             var currRole = Game.creeps[creep].memory.role;
 
             if(currRole == 'remote') {
                 Memory.rooms[Game.creeps[creep].memory.homeRoom].types[currRole].total++;
-                Memory.rooms[Game.creeps[creep].memory.homeRoom].creepsInRoom.push(creep);
             } else if (! _.has(Memory.rooms[currRoom].types, currRole)){
                 Utils.createTypeDistribution(currRoom, currRole);
                 Memory.rooms[currRoom].types[currRole].total++;
-                Memory.rooms[currRoom].creepsInRoom.push(creep);
             } else if(creep != 0 || _.has(Memory.rooms[currRoom].types, currRole)){
-//                console.log(creep);
-//                console.log(''+currRole);
                 Memory.rooms[currRoom].types[currRole].total++;
-                Memory.rooms[currRoom].creepsInRoom.push(creep);
             }
         }
 
@@ -193,6 +183,16 @@ Init.roomsInMemory = function() {
             Memory.rooms[room].mineralDeposits[i].type = mineralDeposits[i].mineralType;
             Memory.rooms[room].mineralDeposits[i].id   = mineralDeposits[i].id;
         }
+        
+        Memory.rooms[room].needsMiner = false;
+        for(sourceId in Memory.rooms[room].sources){
+            if(Memory.sources[sourceId].hasMiner == false){
+                Memory.rooms[room].needsMiner = true;
+                break;
+            }
+        }
+        
+//        Memory.rooms[room].types['miner'].max = Memory.rooms[room].sources.length;
     }
 }
 Init.sourcesInMemory = function(){

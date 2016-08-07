@@ -14,38 +14,37 @@ var Cache = require('help.cache');
 var LZString = require('help.LZString');
 
 function Utils() {};
+
 Utils.reportDuration = function(methodName, cpuUsed){
     if(_.isUndefined(Memory.cpuLog)) Memory.cpuLog={};
     for(let tick in Memory.cpuLog){
         if(tick <= Game.time - Const.CPU_TRACK_TICKS)
             delete Memory.cpuLog[tick];
     }
-
-    Memory.cpuLog[Game.time] = _.merge(Memory.cpuLog[Game.time], {method: methodName, usage: cpuUsed})
+    if(_.isUndefined(Memory.cpuLog[Game.time]))Memory.cpuLog[Game.time]=[];
+    Memory.cpuLog[Game.time].push({method: methodName, usage: cpuUsed})
 }
-Utils.cpuLog = function(checkpoint){
-    if(_.isUndefined(Memory.cpuLog)) Memory.cpuLog={};
-    for(let tick in Memory.cpuLog){
-        if(tick <= Game.time - Const.CPU_TRACK_TICKS)
-            delete Memory.cpuLog[tick];
-    }
 
-    var used = Utils.cpu();
-    switch(checkpoint) {
-        case null:
-        case undefined:
-        default:
-            Memory.cpuLog[Game.time] = used;
+Utils.getDuration = function(methodName, tick){
+    if(!tick) tick = Game.time;
+    if(_.isUndefined(Memory.cpuLog[tick])) return;
+    var ret;
+    for(logEntry of Memory.cpuLog[tick]){
+console.log(logEntry.method)
+        if( logEntry.method == methodName ){
+            ret=logEntry;
             break;
-//            if(!_.isUndefined(Memory.cpuLog[Game.time])) != 'object') {
-//console.log('new Memory.cpuLog['+Game.time+']')
-//                Memory.cpuLog[Game.time] = {};
-//            }
-//            Memory.cpuLog[Game.time][checkpoint] = used;
+        }
     }
-    return used;
+
+    if(ret)
+        return ret.usage;
+    else
+        return;
 }
+
 Utils.posEquals = function(pos1, pos2){return pos1.x == pos2.x && pos1.y == pos2.y && pos1.roomName == pos2.roomName;};
+
 Utils.harvest = function(creep, cache) {
 
 
